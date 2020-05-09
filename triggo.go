@@ -1,4 +1,4 @@
-package main
+package triggo
 
 import (
 	"flag"
@@ -7,10 +7,21 @@ import (
 	"os"
 	"time"
 
+	"github.com/garyburd/redigo/redis"
+	"github.com/joho/godotenv"
 	"github.com/jrallison/go-workers"
 
 	"github.com/gin-gonic/gin"
 )
+
+var redisPool = &redis.Pool{
+	MaxActive: 5,
+	MaxIdle:   5,
+	Wait:      true,
+	Dial: func() (redis.Conn, error) {
+		return redis.Dial("tcp", ":6379")
+	},
+}
 
 type TriggerRequest struct {
 	Device         string    `json:"device"`
@@ -29,6 +40,12 @@ func ProcessTriggerRequest(message *workers.Msg) {
 }
 
 func main() {
+	// Load .env file
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	redisURL := flag.String("redis-address", os.Getenv("REDIS_URL"), "address of Redis instance")
 	redisPool := flag.String("redis-pool", os.Getenv("REDIS_POOL"), "number of Redis connections to keep open")
 	isWorker := flag.Bool("worker", false, "run as Sidekiq worker node")
