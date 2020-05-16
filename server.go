@@ -25,8 +25,10 @@ func createTrigger(c *gin.Context) {
 		return
 	}
 
-	if request.Delay() == 0 {
-		log.Println("Err: Delay not specified")
+	_, err = request.Delay()
+	if err != nil {
+		log.Println("Could not parse convert delay to seconds")
+		log.Print(err)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -43,12 +45,18 @@ func createTrigger(c *gin.Context) {
 func enqueueRequest(request *TriggerRequest, queueNamespace string) (*work.ScheduledJob, error) {
 	enqueuer := work.NewEnqueuer(queueNamespace, redisPool)
 
+	delay, err := (*request).Delay()
+	if err != nil {
+		log.Println("Could not parse request delay time")
+		log.Print(err)
+		return nil, err
+	}
+
 	device := (*request).Device
-	delay := (*request).Delay()
 	triggerKey := (*request).TriggerKey()
 	log.Printf("Scheduled {%s} in {%d} seconds\n", triggerKey, delay)
 
-	return enqueuer.EnqueueIn("delay_trigger", (*request).Delay(), work.Q{
+	return enqueuer.EnqueueIn("delay_trigger", delay, work.Q{
 		"device":      device,
 		"delay":       delay,
 		"trigger_key": triggerKey,

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 type TriggerRequest struct {
 	TriggerType    string    `json:"trigger_type" binding:"required"`
 	Device         string    `json:"device" binding:"required"`
-	DelayInMins    int64     `json:"delay_mins" binding:"required"`
+	DelayInMins    string    `json:"delay_mins" binding:"required"`
 	CreatedTimeStr string    `json:"created_time_str"`
 	CreatedTime    time.Time `json:"created_time" time_format:"unix"`
 }
@@ -20,6 +21,11 @@ func (tr *TriggerRequest) TriggerKey() string {
 	return strings.Join(strs, "_")
 }
 
-func (tr *TriggerRequest) Delay() int64 {
-	return tr.DelayInMins * 60
+func (tr *TriggerRequest) Delay() (int64, error) {
+	delay, err := strconv.ParseInt(tr.DelayInMins, 10, 64)
+	if err != nil {
+		return 0, err
+	} else {
+		return delay * 60, nil
+	}
 }
