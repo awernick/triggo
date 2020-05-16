@@ -1,4 +1,4 @@
-package triggo
+package main
 
 import (
 	"flag"
@@ -11,11 +11,13 @@ import (
 
 var redisPool *redis.Pool
 
+var QueueNamespace = "triggo_triggers"
+
 func main() {
 	// Load .env file
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Println("Error loading .env file or missing. Skipping...")
 	}
 
 	// Parse CLI flags
@@ -35,9 +37,9 @@ func main() {
 
 	if *isWorker {
 		log.Println("Running as Worker Node")
-		RunAsWorkerNode(redisPool)
+		RunAsWorkerNode()
 	} else {
 		log.Println("Running as Server Node")
-		RunAsServerNode(redisPool)
+		RunAsServerNode()
 	}
 }

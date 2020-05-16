@@ -1,12 +1,12 @@
-package triggo
+package main
 
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gocraft/work"
-	"github.com/jrallison/go-workers"
 )
 
 func RunAsServerNode() {
@@ -25,7 +25,24 @@ func createTrigger(c *gin.Context) {
 		return
 	}
 
-	_, err = enqueueRequest(&request, "trigger_request")
+	// Convert DelayInMins to seconds
+	if len(request.DelayInMins) != 0 {
+		f, err := strconv.ParseInt(request.DelayInMins, 10, 64)
+		if err != nil {
+			log.Println(err)
+			c.Status(http.StatusBadRequest)
+			return
+		}
+		request.Delay = f * 60
+	}
+
+	if request.Delay == 0 {
+		log.Println("Err: Delay not specified")
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	_, err = enqueueRequest(&request, QueueNamespace)
 	if err != nil {
 		log.Print(err)
 		c.Status(http.StatusInternalServerError)
@@ -34,13 +51,7 @@ func createTrigger(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func enqueueRequest(request *TriggerRequest, queueNamespace string) (*work.Job, error) {
+func enqueueRequest(request *TriggerRequest, queueNamespace string) (*work.ScheduledJob, error) {
 	enqueuer := work.NewEnqueuer(queueNamespace, redisPool)
-	return enqueuer.Enqueue("trigger_request", work.Q{"device": (*request).Device, "delay": (*request).Delay})
-}
-
-func ProcessTriggerRequest(message *workers.Msg) {
-	log.Println("Processed!")
-	// do something with your message // message.Jid()
-	// message.Args() is a wrapper around go-simplejson (http://godoc.org/github.com/bitly/go-simplejson)
+	return enqueuer.EnqueueIn("delay_trigger", (*request).Delay, work.Q{"device": (*request).Device, "delay": (*request).Delay})
 }
