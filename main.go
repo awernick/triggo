@@ -9,6 +9,12 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type IFTTTConfig struct {
+	APIKey string
+	APIURL string
+}
+
+var iftttConfig *IFTTTConfig
 var redisPool *redis.Pool
 
 var QueueNamespace = "triggo_triggers"
@@ -21,9 +27,16 @@ func main() {
 	}
 
 	// Parse CLI flags
-	redisURL := flag.String("redis-url", os.Getenv("REDIS_URL"), "url of Redis instance")
-	isWorker := flag.Bool("worker", false, "run as Sidekiq worker node")
+	redisURL := flag.String("redis-url", os.Getenv("REDIS_URL"), "url of Redis instance [required]")
+	isWorker := flag.Bool("worker", false, "run as background worker node")
+	iftttAPIKey := flag.String("ifttt-api-key", os.Getenv("IFTTT_API_KEY"), "API Key for IFTTT [required for worker]")
+	iftttAPIURL := flag.String("ifttt-api-url", os.Getenv("IFTTT_API_URL"), "API URL for IFTTT [required for worker]")
 	flag.Parse()
+
+	iftttConfig = &IFTTTConfig{
+		APIKey: *iftttAPIKey,
+		APIURL: *iftttAPIURL,
+	}
 
 	// Instantiate a Redis pool with 5 connection
 	redisPool = &redis.Pool{
