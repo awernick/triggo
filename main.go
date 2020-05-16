@@ -1,35 +1,45 @@
 package main
 
 import (
+	"flag"
 	"log"
-	"net/http"
-	"time"
+	"os"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gomodule/redigo/redis"
+	"github.com/joho/godotenv"
 )
 
-type TriggerRequest struct {
-	Device         string    `json:"device"`
-	Minutes        float64   `json:"minutes,float64"`
-	CreatedTimeStr string    `json:"created_time_str"`
-	CreatedTime    time.Time `json:"created_time, time_format:"unix"`
-}
+var redisPool *redis.Pool
+
+var QueueNamespace = "triggo_triggers"
 
 func main() {
-	router := gin.Default()
-	router.POST("/create", createTrigger)
-	router.Run(":5000")
-}
-
-func createTrigger(c *gin.Context) {
-	var request TriggerRequest
-
-	err := c.ShouldBind(&request)
+	// Load .env file
+	err := godotenv.Load()
 	if err != nil {
-		log.Print(err)
-		c.Status(http.StatusBadRequest)
-		return
+		log.Println("Error loading .env file or missing. Skipping...")
 	}
 
-	c.Status(http.StatusNoContent)
+	// Parse CLI flags
+	redisURL := flag.String("redis-url", os.Getenv("REDIS_URL"), "url of Redis instance")
+	isWorker := flag.Bool("worker", false, "run as Sidekiq worker node")
+	flag.Parse()
+
+	// Instantiate a Redis pool with 5 connection
+	redisPool = &redis.Pool{
+		MaxActive: 5,
+		MaxIdle:   5,
+		Wait:      true,
+		Dial: func() (redis.Conn, error) {
+			return redis.DialURL(*redisURL)
+		},
+	}
+
+	if *isWorker {
+		log.Println("Running as Worker Node")
+		RunAsWorkerNode()
+	} else {
+		log.Println("Running as Server Node")
+		RunAsServerNode()
+	}
 }
