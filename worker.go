@@ -30,14 +30,17 @@ func RunAsWorkerNode() {
 func (c *Context) ProcessTriggerRequest(job *work.Job) error {
 	device := job.ArgString("device")
 	delay := job.ArgInt64("delay")
+	triggerKey := job.ArgString("trigger_key")
 
 	if err := job.ArgError(); err != nil {
 		log.Println(err)
 		return err
 	}
 
+	// I need to map a device to callback
 	log.Println(fmt.Sprintf("Device: %s", device))
 	log.Println(fmt.Sprintf("Delay: %d", delay))
+	log.Println(fmt.Sprintf("Trigger Key: %s", triggerKey))
 
 	// do something with your message // message.Jid()
 	// message.Args() is a wrapper around go-simplejson (http://godoc.org/github.com/bitly/go-simplejson)

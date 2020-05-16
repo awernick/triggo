@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gocraft/work"
@@ -25,18 +24,7 @@ func createTrigger(c *gin.Context) {
 		return
 	}
 
-	// Convert DelayInMins to seconds
-	if len(request.DelayInMins) != 0 {
-		f, err := strconv.ParseInt(request.DelayInMins, 10, 64)
-		if err != nil {
-			log.Println(err)
-			c.Status(http.StatusBadRequest)
-			return
-		}
-		request.Delay = f * 60
-	}
-
-	if request.Delay == 0 {
+	if request.Delay() == 0 {
 		log.Println("Err: Delay not specified")
 		c.Status(http.StatusBadRequest)
 		return
@@ -53,5 +41,15 @@ func createTrigger(c *gin.Context) {
 
 func enqueueRequest(request *TriggerRequest, queueNamespace string) (*work.ScheduledJob, error) {
 	enqueuer := work.NewEnqueuer(queueNamespace, redisPool)
-	return enqueuer.EnqueueIn("delay_trigger", (*request).Delay, work.Q{"device": (*request).Device, "delay": (*request).Delay})
+
+	device := (*request).Device
+	delay := (*request).Delay()
+	triggerKey := (*request).TriggerKey()
+	log.Printf("Scheduled {%s} in {%d} seconds\n", triggerKey, delay)
+
+	return enqueuer.EnqueueIn("delay_trigger", (*request).Delay(), work.Q{
+		"device":      device,
+		"delay":       delay,
+		"trigger_key": triggerKey,
+	})
 }

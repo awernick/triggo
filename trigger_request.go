@@ -1,11 +1,25 @@
 package main
 
-import "time"
+import (
+	"strings"
+	"time"
+
+	"github.com/gobuffalo/flect"
+)
 
 type TriggerRequest struct {
-	Device         string    `json:"device"`
-	DelayInMins    string    `json:"delay_mins,omitempty"`
-	Delay          int64     `json:"delay,int64"`
+	TriggerType    string    `json:"trigger_type" binding:"required"`
+	Device         string    `json:"device" binding:"required"`
+	DelayInMins    int64     `json:"delay_mins" binding:"required"`
 	CreatedTimeStr string    `json:"created_time_str"`
-	CreatedTime    time.Time `json:"created_time, time_format:"unix"`
+	CreatedTime    time.Time `json:"created_time" time_format:"unix"`
+}
+
+func (tr *TriggerRequest) TriggerKey() string {
+	strs := []string{flect.Underscore(tr.TriggerType), flect.Underscore(tr.Device)}
+	return strings.Join(strs, "_")
+}
+
+func (tr *TriggerRequest) Delay() int64 {
+	return tr.DelayInMins * 60
 }
