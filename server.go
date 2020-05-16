@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gocraft/work"
@@ -11,7 +12,7 @@ import (
 func RunAsServerNode() {
 	router := gin.Default()
 	router.POST("/create", createTrigger)
-	router.Run(":5000")
+	router.Run(":" + os.Getenv("PORT"))
 }
 
 func createTrigger(c *gin.Context) {
