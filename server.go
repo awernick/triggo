@@ -37,6 +37,7 @@ func createTrigger(c *gin.Context) {
 	if err != nil {
 		log.Print(err)
 		c.Status(http.StatusInternalServerError)
+		return
 	}
 
 	c.Status(http.StatusNoContent)
@@ -52,7 +53,7 @@ func enqueueRequest(request *TriggerRequest, queueNamespace string) (*work.Sched
 		return nil, err
 	}
 
-	device := (*request).Device
+	device := (*request).NormalizedDeviceName()
 	triggerKey := (*request).TriggerKey()
 	log.Printf("Scheduled {%s} in {%d} seconds\n", triggerKey, delay)
 

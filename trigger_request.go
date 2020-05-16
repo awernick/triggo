@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -10,14 +11,21 @@ import (
 
 type TriggerRequest struct {
 	TriggerType    string    `json:"trigger_type" binding:"required"`
-	Device         string    `json:"device" binding:"required"`
+	DeviceName     string    `json:"device" binding:"required"`
 	DelayInMins    string    `json:"delay_mins" binding:"required"`
 	CreatedTimeStr string    `json:"created_time_str"`
 	CreatedTime    time.Time `json:"created_time" time_format:"unix"`
 }
 
+const DefiniteArticleRegex = `(a|an|and|the)(\s*)`
+
+func (tr *TriggerRequest) NormalizedDeviceName() string {
+	rx := regexp.MustCompile(DefiniteArticleRegex)
+	return rx.ReplaceAllString(tr.DeviceName, "")
+}
+
 func (tr *TriggerRequest) TriggerKey() string {
-	strs := []string{flect.Underscore(tr.TriggerType), flect.Underscore(tr.Device)}
+	strs := []string{flect.Underscore(tr.TriggerType), flect.Underscore(tr.NormalizedDeviceName())}
 	return strings.Join(strs, "_")
 }
 
