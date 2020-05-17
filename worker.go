@@ -31,7 +31,7 @@ func RunAsWorkerNode() {
 		log.Fatal(err)
 	}
 
-	pool := work.NewWorkerPool(Context{}, 10, QueueNamespace, redisPool)
+	pool := work.NewWorkerPool(Context{}, 10, Namespace(), redisPool)
 	pool.Job("delay_trigger", (*Context).ProcessTriggerRequest)
 
 	// Start processing jobs

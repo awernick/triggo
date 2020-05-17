@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/joho/godotenv"
@@ -16,8 +17,6 @@ type IFTTTConfig struct {
 
 var iftttConfig *IFTTTConfig
 var redisPool *redis.Pool
-
-var QueueNamespace = "triggo_triggers"
 
 func main() {
 	// Load .env file
@@ -55,4 +54,8 @@ func main() {
 		log.Println("Running as Server Node")
 		RunAsServerNode()
 	}
+}
+
+func Namespace() string {
+	return filepath.Base(os.Args[0])
 }

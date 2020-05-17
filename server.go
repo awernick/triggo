@@ -33,7 +33,7 @@ func createTrigger(c *gin.Context) {
 		return
 	}
 
-	_, err = enqueueRequest(&request, QueueNamespace)
+	_, err = enqueueRequest(&request, Namespace())
 	if err != nil {
 		log.Print(err)
 		c.Status(http.StatusInternalServerError)
