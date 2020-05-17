@@ -9,6 +9,10 @@ import (
 	"github.com/gobuffalo/flect"
 )
 
+const IFTTTTriggerURLPath = "/trigger/%s/with/key/%s"
+
+const DefiniteArticleRegex = `^(a|an|and|the)(\s+)`
+
 type TriggerRequest struct {
 	TriggerType    string    `json:"trigger_type" binding:"required"`
 	DeviceName     string    `json:"device" binding:"required"`
@@ -18,13 +22,10 @@ type TriggerRequest struct {
 	SecretKey      string    `json:"secret_key"`
 }
 
-const IFTTTTriggerURLPath = "/trigger/%s/with/key/%s"
-
-const DefiniteArticleRegex = `(a|an|and|the)(\s*)`
-
 func (tr *TriggerRequest) NormalizedDeviceName() string {
 	rx := regexp.MustCompile(DefiniteArticleRegex)
-	return rx.ReplaceAllString(tr.DeviceName, "")
+	deviceName := rx.ReplaceAllString(tr.DeviceName, "")
+	return flect.Singularize(deviceName)
 }
 
 func (tr *TriggerRequest) TriggerKey() string {
