@@ -6,17 +6,36 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gocraft/work"
+	"github.com/gomodule/redigo/redis"
 )
 
-func RunAsServerNode() {
+func RunAsServerNode(appConfig AppConfig, redisPool *redis.Pool) {
 	router := gin.Default()
-	router.POST("/create", createTrigger)
-	router.Run(":" + (*appConfig).HTTPPort)
+	router.Use(InjectAppConfig(&appConfig))
+	router.Use(InjectRedisPool(redisPool))
+	router.POST("/create", CreateTrigger)
+	router.Run(":" + appConfig.HTTPPort)
 }
 
-func createTrigger(c *gin.Context) {
-	var request TriggerRequest
+func InjectAppConfig(appConfig *AppConfig) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set("AppConfig", appConfig)
+		c.Next()
+	}
+}
 
+func InjectRedisPool(redisPool *redis.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set("RedisPool", redisPool)
+		c.Next()
+	}
+}
+
+func CreateTrigger(c *gin.Context) {
+	appConfig := c.MustGet("AppConfig").(*AppConfig)
+	redisPool := c.MustGet("RedisPool").(*redis.Pool)
+
+	var request TriggerRequest
 	err := c.ShouldBind(&request)
 	if err != nil {
 		log.Print(err)
@@ -30,15 +49,16 @@ func createTrigger(c *gin.Context) {
 		return
 	}
 
-	_, err = request.Delay()
+	_, err = request.ConvertDelayToSeconds()
 	if err != nil {
-		log.Println("Could not parse delay to seconds")
+		log.Println("Could not parse delay into seconds")
 		log.Print(err)
 		c.Status(http.StatusBadRequest)
 		return
 	}
 
-	_, err = enqueueRequest(&request, Namespace())
+	enqueuer := work.NewEnqueuer((*appConfig).Namespace, redisPool)
+	_, err = EnqueueRequest(&request, enqueuer)
 	if err != nil {
 		log.Print(err)
 		c.Status(http.StatusInternalServerError)
@@ -48,10 +68,8 @@ func createTrigger(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func enqueueRequest(request *TriggerRequest, queueNamespace string) (*work.ScheduledJob, error) {
-	enqueuer := work.NewEnqueuer(queueNamespace, (*appConfig).redisPool)
-
-	delay, err := (*request).Delay()
+func EnqueueRequest(request *TriggerRequest, enqueuer *work.Enqueuer) (*work.ScheduledJob, error) {
+	delaySecs, err := (*request).ConvertDelayToSeconds()
 	if err != nil {
 		log.Println("Could not parse request delay time")
 		log.Print(err)
@@ -59,12 +77,12 @@ func enqueueRequest(request *TriggerRequest, queueNamespace string) (*work.Sched
 	}
 
 	device := (*request).NormalizedDeviceName()
-	triggerKey := (*request).TriggerKey()
-	log.Printf("Scheduled {%s} in {%d} seconds\n", triggerKey, delay)
+	triggerType := (*request).NormalizedTriggerType()
+	log.Printf("Scheduled {%s} to {%s} in {%d} seconds\n", device, triggerType, delaySecs)
 
-	return enqueuer.EnqueueIn("delay_trigger", delay, work.Q{
-		"device":      device,
-		"delay":       delay,
-		"trigger_key": triggerKey,
+	return enqueuer.EnqueueIn("delay_trigger", delaySecs, work.Q{
+		"device":       device,
+		"delay":        delaySecs,
+		"trigger_type": triggerType,
 	})
 }
