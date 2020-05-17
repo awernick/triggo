@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gocraft/work"
@@ -12,7 +11,7 @@ import (
 func RunAsServerNode() {
 	router := gin.Default()
 	router.POST("/create", createTrigger)
-	router.Run(":" + os.Getenv("PORT"))
+	router.Run(":" + (*appConfig).HTTPPort)
 }
 
 func createTrigger(c *gin.Context) {
@@ -25,9 +24,15 @@ func createTrigger(c *gin.Context) {
 		return
 	}
 
+	if request.SecretKey != (*appConfig).SecretKey {
+		log.Printf("Invalid secret key: %s\n", request.SecretKey)
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+
 	_, err = request.Delay()
 	if err != nil {
-		log.Println("Could not parse convert delay to seconds")
+		log.Println("Could not parse delay to seconds")
 		log.Print(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -44,7 +49,7 @@ func createTrigger(c *gin.Context) {
 }
 
 func enqueueRequest(request *TriggerRequest, queueNamespace string) (*work.ScheduledJob, error) {
-	enqueuer := work.NewEnqueuer(queueNamespace, redisPool)
+	enqueuer := work.NewEnqueuer(queueNamespace, (*appConfig).redisPool)
 
 	delay, err := (*request).Delay()
 	if err != nil {
