@@ -16,22 +16,21 @@ import (
 type Context struct{}
 
 func RunAsWorkerNode() {
-
-	if len((*iftttConfig).APIKey) == 0 {
+	if len((*appConfig).IFTTTAPIKey) == 0 {
 		log.Fatal("Please specify an IFTTT API Key.")
 	}
 
-	if len((*iftttConfig).APIURL) == 0 {
+	if len((*appConfig).IFTTTAPIURL) == 0 {
 		log.Fatal("Please specify an IFTTT API URL.")
 	}
 
-	_, err := url.Parse((*iftttConfig).APIURL)
+	_, err := url.Parse((*appConfig).IFTTTAPIURL)
 	if err != nil {
 		log.Println("Invalid IFTTT API URL")
 		log.Fatal(err)
 	}
 
-	pool := work.NewWorkerPool(Context{}, 10, Namespace(), redisPool)
+	pool := work.NewWorkerPool(Context{}, 10, Namespace(), (*appConfig).redisPool)
 	pool.Job("delay_trigger", (*Context).ProcessTriggerRequest)
 
 	// Start processing jobs
@@ -61,8 +60,8 @@ func (c *Context) ProcessTriggerRequest(job *work.Job) error {
 	log.Println(fmt.Sprintf("Delay: %d", delay))
 	log.Println(fmt.Sprintf("Trigger Key: %s", triggerKey))
 
-	requestURL, _ := url.Parse((*iftttConfig).APIURL)
-	requestURL.Path = path.Join(requestURL.Path, triggerKey, "with", "key", iftttConfig.APIKey)
+	requestURL, _ := url.Parse((*appConfig).IFTTTAPIURL)
+	requestURL.Path = path.Join(fmt.Sprintf(IFTTTTriggerURLPath, triggerKey, (*appConfig).IFTTTAPIKey))
 
 	log.Printf("POSTing to %s", requestURL.String())
 	client := &http.Client{}

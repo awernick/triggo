@@ -15,7 +15,10 @@ type TriggerRequest struct {
 	DelayInMins    string    `json:"delay_mins" binding:"required"`
 	CreatedTimeStr string    `json:"created_time_str"`
 	CreatedTime    time.Time `json:"created_time" time_format:"unix"`
+	SecretKey      string    `json:"secret_key"`
 }
+
+const IFTTTTriggerURLPath = "/trigger/%s/with/key/%s"
 
 const DefiniteArticleRegex = `(a|an|and|the)(\s*)`
 

@@ -10,12 +10,15 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type IFTTTConfig struct {
-	APIKey string
-	APIURL string
+type AppConfig struct {
+	IFTTTAPIKey string
+	IFTTTAPIURL string
+	SecretKey   string
+	redisPool   *redis.Pool
+	HTTPPort    string
 }
 
-var iftttConfig *IFTTTConfig
+var appConfig *AppConfig
 var redisPool *redis.Pool
 
 func main() {
@@ -28,17 +31,21 @@ func main() {
 	// Parse CLI flags
 	redisURL := flag.String("redis-url", os.Getenv("REDIS_URL"), "url of Redis instance [required]")
 	isWorker := flag.Bool("worker", false, "run as background worker node")
+	secretKey := flag.String("secret-key", os.Getenv("SECRET_KEY"), "key used to authenticate requests")
 	iftttAPIKey := flag.String("ifttt-api-key", os.Getenv("IFTTT_API_KEY"), "API Key for IFTTT [required for worker]")
 	iftttAPIURL := flag.String("ifttt-api-url", os.Getenv("IFTTT_API_URL"), "API URL for IFTTT [required for worker]")
+	httpPort := flag.String("port", os.Getenv("PORT"), "port used to listen for incoming http requests [required for server]")
 	flag.Parse()
 
-	iftttConfig = &IFTTTConfig{
-		APIKey: *iftttAPIKey,
-		APIURL: *iftttAPIURL,
+	appConfig = &AppConfig{
+		IFTTTAPIKey: *iftttAPIKey,
+		IFTTTAPIURL: *iftttAPIURL,
+		SecretKey:   *secretKey,
+		HTTPPort:    *httpPort,
 	}
 
 	// Instantiate a Redis pool with 5 connection
-	redisPool = &redis.Pool{
+	appConfig.redisPool = &redis.Pool{
 		MaxActive: 5,
 		MaxIdle:   5,
 		Wait:      true,
