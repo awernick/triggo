@@ -87,7 +87,8 @@ func CreateTrigger(c *gin.Context) {
 		log.Printf("Mapping {%s} to {%s}\n", request.DeviceName, supportedDeviceName)
 		request.DeviceName = supportedDeviceName
 	} else {
-		log.Printf("Could not map device name: %s", request.NormalizedDeviceName())
+		log.Printf("Could not map device name: {%s}", request.DeviceName)
+		log.Printf("Could not map device name: {%s}", request.NormalizedDeviceName())
 	}
 
 	enqueuer := work.NewEnqueuer(appConfig.Namespace, redisPool)

@@ -11,7 +11,7 @@ import (
 
 const IFTTTTriggerURLPath = "/trigger/%s/with/key/%s"
 
-const DefiniteArticleRegex = `^(a|an|and|the)(\s+)`
+const DefiniteArticleRegex = `^(\s*)(a|an|and|the)(\s+)`
 
 type TriggerRequest struct {
 	TriggerType    string    `json:"trigger_type" binding:"required"`
