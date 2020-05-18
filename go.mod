@@ -11,4 +11,5 @@ require (
 	github.com/gomodule/redigo v1.8.1
 	github.com/joho/godotenv v1.3.0
 	github.com/robfig/cron v1.2.0 // indirect
+	gopkg.in/yaml.v2 v2.3.0
 )

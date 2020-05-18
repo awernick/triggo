@@ -16,25 +16,29 @@ const DefiniteArticleRegex = `^(a|an|and|the)(\s+)`
 type TriggerRequest struct {
 	TriggerType    string    `json:"trigger_type" binding:"required"`
 	DeviceName     string    `json:"device" binding:"required"`
-	DelayInMins    string    `json:"delay_mins" binding:"required"`
+	Delay          string    `json:"delay_mins" binding:"required"`
 	CreatedTimeStr string    `json:"created_time_str"`
 	CreatedTime    time.Time `json:"created_time" time_format:"unix"`
 	SecretKey      string    `json:"secret_key"`
 }
 
-func (tr *TriggerRequest) NormalizedDeviceName() string {
+func (tr TriggerRequest) NormalizedDeviceName() string {
 	rx := regexp.MustCompile(DefiniteArticleRegex)
 	deviceName := rx.ReplaceAllString(tr.DeviceName, "")
-	return flect.Singularize(deviceName)
+	deviceName = flect.Singularize(deviceName)
+	return flect.Underscore(deviceName)
 }
 
-func (tr *TriggerRequest) TriggerKey() string {
-	strs := []string{flect.Underscore(tr.TriggerType), flect.Underscore(tr.NormalizedDeviceName())}
-	return strings.Join(strs, "_")
+func (tr TriggerRequest) NormalizedTriggerType() string {
+	return flect.Underscore(tr.TriggerType)
 }
 
-func (tr *TriggerRequest) Delay() (int64, error) {
-	delay, err := strconv.ParseInt(tr.DelayInMins, 10, 64)
+func (tr TriggerRequest) TriggerKey() string {
+	return strings.Join([]string{tr.NormalizedTriggerType(), tr.NormalizedDeviceName()}, "_")
+}
+
+func (tr *TriggerRequest) ConvertDelayToSeconds() (int64, error) {
+	delay, err := strconv.ParseInt(tr.Delay, 10, 64)
 	if err != nil {
 		return 0, err
 	} else {

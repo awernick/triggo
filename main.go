@@ -1,8 +1,11 @@
 package main
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -14,12 +17,9 @@ type AppConfig struct {
 	IFTTTAPIKey string
 	IFTTTAPIURL string
 	SecretKey   string
-	redisPool   *redis.Pool
 	HTTPPort    string
+	Namespace   string
 }
-
-var appConfig *AppConfig
-var redisPool *redis.Pool
 
 func main() {
 	// Load .env file
@@ -35,17 +35,19 @@ func main() {
 	iftttAPIKey := flag.String("ifttt-api-key", os.Getenv("IFTTT_API_KEY"), "API Key for IFTTT [required for worker]")
 	iftttAPIURL := flag.String("ifttt-api-url", os.Getenv("IFTTT_API_URL"), "API URL for IFTTT [required for worker]")
 	httpPort := flag.String("port", os.Getenv("PORT"), "port used to listen for incoming http requests [required for server]")
+	namespace := flag.String("namespace", ProgName(), "namespace used for redis work queues. Defaults to program name (arg[0]).")
 	flag.Parse()
 
-	appConfig = &AppConfig{
+	appConfig := AppConfig{
 		IFTTTAPIKey: *iftttAPIKey,
 		IFTTTAPIURL: *iftttAPIURL,
 		SecretKey:   *secretKey,
 		HTTPPort:    *httpPort,
+		Namespace:   *namespace,
 	}
 
 	// Instantiate a Redis pool with 5 connection
-	appConfig.redisPool = &redis.Pool{
+	redisPool := &redis.Pool{
 		MaxActive: 5,
 		MaxIdle:   5,
 		Wait:      true,
@@ -56,13 +58,35 @@ func main() {
 
 	if *isWorker {
 		log.Println("Running as Worker Node")
-		RunAsWorkerNode()
+		RunAsWorkerNode(appConfig, redisPool)
 	} else {
 		log.Println("Running as Server Node")
-		RunAsServerNode()
+		RunAsServerNode(appConfig, redisPool)
 	}
 }
 
-func Namespace() string {
+func (ac *AppConfig) ValidateIFTTTAPIKey() error {
+	if len(ac.IFTTTAPIKey) == 0 {
+		return errors.New("please specify an IFTTT API Key")
+	}
+
+	return nil
+}
+
+func (ac *AppConfig) ValidateIFTTTAPIURL() error {
+	if len(ac.IFTTTAPIURL) == 0 {
+		return errors.New("please specify an IFTTT API URL")
+	}
+
+	_, err := url.Parse(ac.IFTTTAPIURL)
+	if err != nil {
+		log.Print(err)
+		return fmt.Errorf("invalid IFTTT API URL: %s", ac.IFTTTAPIURL)
+	}
+
+	return nil
+}
+
+func ProgName() string {
 	return filepath.Base(os.Args[0])
 }

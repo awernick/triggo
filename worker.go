@@ -11,32 +11,43 @@ import (
 	"path"
 
 	"github.com/gocraft/work"
+	"github.com/gomodule/redigo/redis"
 )
 
-type Context struct{}
+type Context struct {
+	IFTTTAPIKey string
+	IFTTTAPIURL string
+}
 
-func RunAsWorkerNode() {
-	if len((*appConfig).IFTTTAPIKey) == 0 {
-		log.Fatal("Please specify an IFTTT API Key.")
-	}
+func RunAsWorkerNode(appConfig AppConfig, redisPool *redis.Pool) {
+	var err error
 
-	if len((*appConfig).IFTTTAPIURL) == 0 {
-		log.Fatal("Please specify an IFTTT API URL.")
-	}
-
-	_, err := url.Parse((*appConfig).IFTTTAPIURL)
+	// Validate IFTTT API Key
+	err = appConfig.ValidateIFTTTAPIKey()
 	if err != nil {
-		log.Println("Invalid IFTTT API URL")
 		log.Fatal(err)
 	}
 
-	pool := work.NewWorkerPool(Context{}, 10, Namespace(), (*appConfig).redisPool)
-	pool.Job("delay_trigger", (*Context).ProcessTriggerRequest)
+	// Validate IFTTT API URL
+	err = appConfig.ValidateIFTTTAPIURL()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Inject API Key and URL to Job Context
+	ctx := Context{
+		IFTTTAPIKey: appConfig.IFTTTAPIKey,
+		IFTTTAPIURL: appConfig.IFTTTAPIURL,
+	}
+
+	// Start background worker pool
+	pool := work.NewWorkerPool(ctx, 10, appConfig.Namespace, redisPool)
+	pool.Job("delay_trigger", ctx.ProcessTriggerRequest)
 
 	// Start processing jobs
 	pool.Start()
 
-	// Wait for a signal to quit:
+	// Wait for a signal to quit
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, os.Kill)
 	<-signalChan
@@ -59,9 +70,10 @@ func (c *Context) ProcessTriggerRequest(job *work.Job) error {
 	log.Println(fmt.Sprintf("Device: %s", device))
 	log.Println(fmt.Sprintf("Delay: %d", delay))
 	log.Println(fmt.Sprintf("Trigger Key: %s", triggerKey))
-
-	requestURL, _ := url.Parse((*appConfig).IFTTTAPIURL)
-	requestURL.Path = path.Join(fmt.Sprintf(IFTTTTriggerURLPath, triggerKey, (*appConfig).IFTTTAPIKey))
+	log.Println(c.IFTTTAPIURL)
+	log.Println(c.IFTTTAPIKey)
+	requestURL, _ := url.Parse(c.IFTTTAPIURL)
+	requestURL.Path = path.Join(fmt.Sprintf(IFTTTTriggerURLPath, triggerKey, c.IFTTTAPIKey))
 
 	log.Printf("POSTing to %s", requestURL.String())
 	client := &http.Client{}
