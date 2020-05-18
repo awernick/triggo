@@ -10,13 +10,20 @@ import (
 )
 
 func RunAsServerNode(appConfig AppConfig, redisPool *redis.Pool) {
+	var err error
+
 	// Load Device Mappings
 	deviceMapper := DeviceMapper{}
-	err := deviceMapper.LoadMappings()
+	err = deviceMapper.LoadMappings()
 	if err != nil {
 		log.Fatal(err)
 	} else {
 		log.Printf("Mappings: %s", deviceMapper.mappings)
+	}
+
+	err = appConfig.ValidateHTTPPort()
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	router := gin.Default()
