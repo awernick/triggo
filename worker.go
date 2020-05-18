@@ -34,12 +34,6 @@ func RunAsWorkerNode(appConfig AppConfig, redisPool *redis.Pool) {
 		log.Fatal(err)
 	}
 
-	// Load Device Mappings
-	err = appConfig.LoadDeviceMappings()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Inject API Key and URL to Job Context
 	ctx := Context{
 		IFTTTAPIKey: appConfig.IFTTTAPIKey,
@@ -48,7 +42,7 @@ func RunAsWorkerNode(appConfig AppConfig, redisPool *redis.Pool) {
 
 	// Start background worker pool
 	pool := work.NewWorkerPool(ctx, 10, appConfig.Namespace, redisPool)
-	pool.Job("delay_trigger", (*Context).ProcessTriggerRequest)
+	pool.Job("delay_trigger", ctx.ProcessTriggerRequest)
 
 	// Start processing jobs
 	pool.Start()
@@ -76,7 +70,8 @@ func (c *Context) ProcessTriggerRequest(job *work.Job) error {
 	log.Println(fmt.Sprintf("Device: %s", device))
 	log.Println(fmt.Sprintf("Delay: %d", delay))
 	log.Println(fmt.Sprintf("Trigger Key: %s", triggerKey))
-
+	log.Println((*c).IFTTTAPIURL)
+	log.Println((*c).IFTTTAPIKey)
 	requestURL, _ := url.Parse((*c).IFTTTAPIURL)
 	requestURL.Path = path.Join(fmt.Sprintf(IFTTTTriggerURLPath, triggerKey, (*c).IFTTTAPIKey))
 

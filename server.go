@@ -10,9 +10,19 @@ import (
 )
 
 func RunAsServerNode(appConfig AppConfig, redisPool *redis.Pool) {
+	// Load Device Mappings
+	deviceMapper := DeviceMapper{}
+	err := deviceMapper.LoadMappings()
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		log.Printf("Mappings: %s", deviceMapper.mappings)
+	}
+
 	router := gin.Default()
 	router.Use(InjectAppConfig(&appConfig))
 	router.Use(InjectRedisPool(redisPool))
+	router.Use(InjectDeviceMapper(&deviceMapper))
 	router.POST("/create", CreateTrigger)
 	router.Run(":" + appConfig.HTTPPort)
 }
@@ -31,9 +41,17 @@ func InjectRedisPool(redisPool *redis.Pool) gin.HandlerFunc {
 	}
 }
 
+func InjectDeviceMapper(deviceMapper *DeviceMapper) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set("DeviceMapper", deviceMapper)
+		c.Next()
+	}
+}
+
 func CreateTrigger(c *gin.Context) {
 	appConfig := c.MustGet("AppConfig").(*AppConfig)
 	redisPool := c.MustGet("RedisPool").(*redis.Pool)
+	deviceMapper := c.MustGet("DeviceMapper").(*DeviceMapper)
 
 	var request TriggerRequest
 	err := c.ShouldBind(&request)
@@ -57,6 +75,14 @@ func CreateTrigger(c *gin.Context) {
 		return
 	}
 
+	supportedDeviceName := (*deviceMapper).MapToSupportedDevice(request.NormalizedDeviceName())
+	if supportedDeviceName != "" {
+		log.Printf("Mapping {%s} to {%s}\n", request.DeviceName, supportedDeviceName)
+		request.DeviceName = supportedDeviceName
+	} else {
+		log.Printf("Could not map device name: %s", request.NormalizedDeviceName())
+	}
+
 	enqueuer := work.NewEnqueuer((*appConfig).Namespace, redisPool)
 	_, err = EnqueueRequest(&request, enqueuer)
 	if err != nil {
@@ -78,11 +104,12 @@ func EnqueueRequest(request *TriggerRequest, enqueuer *work.Enqueuer) (*work.Sch
 
 	device := (*request).NormalizedDeviceName()
 	triggerType := (*request).NormalizedTriggerType()
-	log.Printf("Scheduled {%s} to {%s} in {%d} seconds\n", device, triggerType, delaySecs)
+	triggerKey := (*request).TriggerKey()
+	log.Printf("[%s]: Scheduled {%s} to {%s} in {%d} seconds\n", triggerKey, device, triggerType, delaySecs)
 
 	return enqueuer.EnqueueIn("delay_trigger", delaySecs, work.Q{
-		"device":       device,
-		"delay":        delaySecs,
-		"trigger_type": triggerType,
+		"device":      device,
+		"delay":       delaySecs,
+		"trigger_key": triggerKey,
 	})
 }

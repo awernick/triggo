@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -12,16 +11,14 @@ import (
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/joho/godotenv"
-	"gopkg.in/yaml.v2"
 )
 
 type AppConfig struct {
-	IFTTTAPIKey   string
-	IFTTTAPIURL   string
-	SecretKey     string
-	HTTPPort      string
-	DeviceMapping map[interface{}]interface{}
-	Namespace     string
+	IFTTTAPIKey string
+	IFTTTAPIURL string
+	SecretKey   string
+	HTTPPort    string
+	Namespace   string
 }
 
 func main() {
@@ -85,22 +82,6 @@ func (ac *AppConfig) ValidateIFTTTAPIURL() error {
 	if err != nil {
 		log.Print(err)
 		return fmt.Errorf("invalid IFTTT API URL: %s", (*ac).IFTTTAPIURL)
-	}
-
-	return nil
-}
-
-func (ac *AppConfig) LoadDeviceMappings() error {
-	data, err := ioutil.ReadFile("mappings.yaml")
-	if err != nil {
-		log.Println(err)
-		return errors.New("could not load device mappings.yaml")
-	}
-
-	err = yaml.Unmarshal([]byte(data), &ac.DeviceMapping)
-	if err != nil {
-		log.Println(err)
-		return errors.New("could not load device mappings in to memory")
 	}
 
 	return nil

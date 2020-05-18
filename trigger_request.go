@@ -3,6 +3,7 @@ package main
 import (
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gobuffalo/flect"
@@ -21,15 +22,19 @@ type TriggerRequest struct {
 	SecretKey      string    `json:"secret_key"`
 }
 
-func (tr *TriggerRequest) NormalizedDeviceName() string {
+func (tr TriggerRequest) NormalizedDeviceName() string {
 	rx := regexp.MustCompile(DefiniteArticleRegex)
 	deviceName := rx.ReplaceAllString(tr.DeviceName, "")
 	deviceName = flect.Singularize(deviceName)
 	return flect.Underscore(deviceName)
 }
 
-func (tr *TriggerRequest) NormalizedTriggerType() string {
+func (tr TriggerRequest) NormalizedTriggerType() string {
 	return flect.Underscore(tr.TriggerType)
+}
+
+func (tr TriggerRequest) TriggerKey() string {
+	return strings.Join([]string{tr.NormalizedTriggerType(), tr.NormalizedDeviceName()}, "_")
 }
 
 func (tr *TriggerRequest) ConvertDelayToSeconds() (int64, error) {

@@ -1,0 +1,8 @@
+tv: bedroom_tv
+alans_tv: bedroom_tv
+lamp: bedroom_lamp
+light: bedroom_lamp
+bedroom_light: bedroom_lamp
+my_light: bedroom_lamp
+kitchen_lamp: kitchen_light
+kitchen_bulb: kitchen_light
