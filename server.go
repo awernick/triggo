@@ -61,7 +61,7 @@ func CreateTrigger(c *gin.Context) {
 		return
 	}
 
-	if request.SecretKey != (*appConfig).SecretKey {
+	if request.SecretKey != appConfig.SecretKey {
 		log.Printf("Invalid secret key: %s\n", request.SecretKey)
 		c.Status(http.StatusUnauthorized)
 		return
@@ -75,7 +75,7 @@ func CreateTrigger(c *gin.Context) {
 		return
 	}
 
-	supportedDeviceName := (*deviceMapper).MapToSupportedDevice(request.NormalizedDeviceName())
+	supportedDeviceName := deviceMapper.MapToSupportedDevice(request.NormalizedDeviceName())
 	if supportedDeviceName != "" {
 		log.Printf("Mapping {%s} to {%s}\n", request.DeviceName, supportedDeviceName)
 		request.DeviceName = supportedDeviceName
@@ -83,7 +83,7 @@ func CreateTrigger(c *gin.Context) {
 		log.Printf("Could not map device name: %s", request.NormalizedDeviceName())
 	}
 
-	enqueuer := work.NewEnqueuer((*appConfig).Namespace, redisPool)
+	enqueuer := work.NewEnqueuer(appConfig.Namespace, redisPool)
 	_, err = EnqueueRequest(&request, enqueuer)
 	if err != nil {
 		log.Print(err)
@@ -95,16 +95,16 @@ func CreateTrigger(c *gin.Context) {
 }
 
 func EnqueueRequest(request *TriggerRequest, enqueuer *work.Enqueuer) (*work.ScheduledJob, error) {
-	delaySecs, err := (*request).ConvertDelayToSeconds()
+	delaySecs, err := request.ConvertDelayToSeconds()
 	if err != nil {
 		log.Println("Could not parse request delay time")
 		log.Print(err)
 		return nil, err
 	}
 
-	device := (*request).NormalizedDeviceName()
-	triggerType := (*request).NormalizedTriggerType()
-	triggerKey := (*request).TriggerKey()
+	device := request.NormalizedDeviceName()
+	triggerType := request.NormalizedTriggerType()
+	triggerKey := request.TriggerKey()
 	log.Printf("[%s]: Scheduled {%s} to {%s} in {%d} seconds\n", triggerKey, device, triggerType, delaySecs)
 
 	return enqueuer.EnqueueIn("delay_trigger", delaySecs, work.Q{

@@ -66,7 +66,7 @@ func main() {
 }
 
 func (ac *AppConfig) ValidateIFTTTAPIKey() error {
-	if len((*ac).IFTTTAPIKey) == 0 {
+	if len(ac.IFTTTAPIKey) == 0 {
 		return errors.New("please specify an IFTTT API Key")
 	}
 
@@ -74,14 +74,14 @@ func (ac *AppConfig) ValidateIFTTTAPIKey() error {
 }
 
 func (ac *AppConfig) ValidateIFTTTAPIURL() error {
-	if len((*ac).IFTTTAPIURL) == 0 {
+	if len(ac.IFTTTAPIURL) == 0 {
 		return errors.New("please specify an IFTTT API URL")
 	}
 
-	_, err := url.Parse((*ac).IFTTTAPIURL)
+	_, err := url.Parse(ac.IFTTTAPIURL)
 	if err != nil {
 		log.Print(err)
-		return fmt.Errorf("invalid IFTTT API URL: %s", (*ac).IFTTTAPIURL)
+		return fmt.Errorf("invalid IFTTT API URL: %s", ac.IFTTTAPIURL)
 	}
 
 	return nil

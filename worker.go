@@ -70,10 +70,10 @@ func (c *Context) ProcessTriggerRequest(job *work.Job) error {
 	log.Println(fmt.Sprintf("Device: %s", device))
 	log.Println(fmt.Sprintf("Delay: %d", delay))
 	log.Println(fmt.Sprintf("Trigger Key: %s", triggerKey))
-	log.Println((*c).IFTTTAPIURL)
-	log.Println((*c).IFTTTAPIKey)
-	requestURL, _ := url.Parse((*c).IFTTTAPIURL)
-	requestURL.Path = path.Join(fmt.Sprintf(IFTTTTriggerURLPath, triggerKey, (*c).IFTTTAPIKey))
+	log.Println(c.IFTTTAPIURL)
+	log.Println(c.IFTTTAPIKey)
+	requestURL, _ := url.Parse(c.IFTTTAPIURL)
+	requestURL.Path = path.Join(fmt.Sprintf(IFTTTTriggerURLPath, triggerKey, c.IFTTTAPIKey))
 
 	log.Printf("POSTing to %s", requestURL.String())
 	client := &http.Client{}

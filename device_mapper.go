@@ -13,7 +13,7 @@ type DeviceMapper struct {
 }
 
 func (dm *DeviceMapper) MapToSupportedDevice(key string) string {
-	return (*dm).mappings[key]
+	return dm.mappings[key]
 }
 
 func (dm *DeviceMapper) LoadMappings() error {
