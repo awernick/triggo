@@ -1,12 +1,12 @@
 package main
 
 import (
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gobuffalo/flect"
+	"gopkg.in/jdkato/prose.v2"
 )
 
 const IFTTTTriggerURLPath = "/trigger/%s/with/key/%s"
@@ -22,19 +22,40 @@ type TriggerRequest struct {
 	SecretKey      string    `json:"secret_key"`
 }
 
-func (tr TriggerRequest) NormalizedDeviceName() string {
-	rx := regexp.MustCompile(DefiniteArticleRegex)
-	deviceName := rx.ReplaceAllString(tr.DeviceName, "")
-	deviceName = flect.Singularize(deviceName)
-	return flect.Underscore(deviceName)
+func (tr TriggerRequest) extractDeviceNameNouns() ([]string, error) {
+	var nouns []string
+
+	doc, err := prose.NewDocument(tr.DeviceName)
+	if err != nil {
+		return nouns, err
+	}
+
+	for _, tok := range doc.Tokens() {
+		if strings.Contains(tok.Tag, "NN") {
+			nouns = append(nouns, tok.Text)
+		}
+	}
+
+	return nouns, nil
 }
 
-func (tr TriggerRequest) NormalizedTriggerType() string {
+func (tr TriggerRequest) NormalizeDeviceName() (string, error) {
+	nouns, err := tr.extractDeviceNameNouns()
+	if err != nil {
+		return "", err
+	}
+	cleanDeviceName := strings.Join(nouns, " ")
+	singularDeviceName := flect.Singularize(cleanDeviceName)
+	normalizedDeviceName := flect.Underscore(singularDeviceName)
+	return normalizedDeviceName, nil
+}
+
+func (tr *TriggerRequest) NormalizeTriggerType() string {
 	return flect.Underscore(tr.TriggerType)
 }
 
 func (tr TriggerRequest) TriggerKey() string {
-	return strings.Join([]string{tr.NormalizedTriggerType(), tr.NormalizedDeviceName()}, "_")
+	return strings.Join([]string{tr.TriggerType, tr.DeviceName}, "_")
 }
 
 func (tr *TriggerRequest) ConvertDelayToSeconds() (int64, error) {
