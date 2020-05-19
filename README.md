@@ -99,7 +99,7 @@ As you can see, an extra 'the' was appended to the device name. Once our trigger
 
 In order to keep things normalized, Triggo does the following preprocessing of the device name before scheduling a trigger:
 
-1. remove the following definite articles from the device name: a, an, and, the
+1. removes all words that are not nouns (using [prose](https://github.com/jdkato/prose)) from the device name. E.g will remove words such as `a, an, and, the, my, etc..`
 2. remap using mappings.yaml e.g. the lights => bedroom_lamp
 3. singularize device name e.g. bedroom lights => bedroom light, lamps => lamp, etc...
 4. convert to underscore_case e.g. Bedroom TV => bedroom_tv
